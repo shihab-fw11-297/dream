@@ -3,6 +3,7 @@ const axios = require('axios');
 const router = express.Router();
 const config = require('../config');
 const analysis = require('../analysis');
+const Prediction = require('../model/result');
 
 router.get('/predict', async (req, res) => {
     try {
@@ -13,16 +14,22 @@ router.get('/predict', async (req, res) => {
 
         const prediction = analysis.getPrediction(data);
 
-        res.json({
+        const predictionData = {
             prediction,
             currentPrice: data[data.length - 1].c,
-            timestamp: new Date().toISOString(),
+            timestamp: new Date(),
             metadata: {
                 dataPoints: data.length,
                 timeframe: '1m',
-                lastUpdate: new Date(data[data.length - 1].t * 1000).toISOString()
+                lastUpdate: new Date(data[data.length - 1].t * 1000)
             }
-        });
+        };
+
+        // Save to MongoDB
+        const predictionRecord = new Prediction(predictionData);
+        await predictionRecord.save();
+
+       res.json(predictionData);
 
     } catch (error) {
         console.error('Error analyzing forex data:', error);
